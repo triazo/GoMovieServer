@@ -6,6 +6,7 @@ import (
         "net/http"
         "os"
         "path/filepath"
+        "strings"
 )
 
 var visits int = 0
