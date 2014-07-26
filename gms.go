@@ -71,6 +71,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
         // ==== Stuff for a Directory
 
         // Check if there is a trailing slash.  If not, redirect
+		if !strings.HasSuffix(request, "/") {
+			http.Redirect(w, r, r.URL.Path+"/", 300)
+		}
 
         // At this point you can assume there is a slash
 
@@ -82,7 +85,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
         fmt.Fprintf(w,"<html>\n")
         fmt.Fprintf(w,"<head>\n")
-        fmt.Fprintf(w,"  <script type='text/javascript' src='script.js'></script>\n")
+        fmt.Fprintf(w,"  <script type='text/javascript' src='/script.js'></script>\n")
         fmt.Fprintf(w,"</head>\n")
         fmt.Fprintf(w,"<body>\n")
         fmt.Fprintf(w,"  <span id='count'>%d</span> Visits so far\n", visits)
@@ -102,9 +105,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w,"  </ul>\n")
         fmt.Fprintf(w,"</body>\n</html>")
     } else {
-        // TODO: read byte by byte
-        fb, _ := ioutil.ReadFile(request)
-        fmt.Fprintf(w, string(fb))
+        http.ServeFile(w, r, request)
     }
 
     //fmt.Printf("Handling connection number %d\n", visits)
