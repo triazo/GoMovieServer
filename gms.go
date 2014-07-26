@@ -6,6 +6,7 @@ import (
     "net/http"
     "os"
     "path/filepath"
+    "strings"
 )
 
 var visits int = 0
@@ -47,7 +48,7 @@ func isDirectory(path string) (bool, error) {
     if fi.Mode().IsDir() {
         return true, nil
     }
-    
+
     return dir, nil
 }
 
