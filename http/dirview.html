@@ -1,0 +1,14 @@
+<html>
+  <head>
+    <title>Go Media Server v0.2</title>
+  </head>
+  <body>
+    <h1>{{.Path}}</h1>
+    <ul>
+      {{range .Files}}
+      <li><a href="{{.}}">{{.}}</a></li>
+      {{end}}
+    </ul>
+    {{.Visits}} requests to this web server so far
+  </body>
+</html>

@@ -7,19 +7,15 @@ import (
     "os"
     "path/filepath"
     "strings"
+	"text/template"
 )
 
 var visits int = 0
 
-func linkify(filename string) (string) {
-    var r string = ""
-    r += "<a href=\"" + filename + "\">" + filename + "</a>"
-    return r
-}
-
-func tagify(text string, tag string, attributes string) (string) {
-    var r string = "<" + tag + " " + attributes + ">" + text + "</" + tag + ">"
-    return r
+type directory struct {
+	Visits  int
+	Path    string
+	Files   []string
 }
 
 func getHostname() (string) {
@@ -52,6 +48,7 @@ func isDirectory(path string) (bool, error) {
     return dir, nil
 }
 
+
 func handler(w http.ResponseWriter, r *http.Request) {
 
     // Get a full path to the destanation file
@@ -62,6 +59,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
     mode, err := isDirectory(request)
     if err != nil {
+		w.WriteHeader(404)
         // 404 Should occur here somehow
         return
     }
@@ -71,9 +69,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
         // ==== Stuff for a Directory
 
         // Check if there is a trailing slash.  If not, redirect
-		if !strings.HasSuffix(request, "/") {
-			http.Redirect(w, r, r.URL.Path+"/", 300)
-		}
+        if !strings.HasSuffix(request, "/") {
+            http.Redirect(w, r, r.URL.Path+"/", 300)
+        }
 
         // At this point you can assume there is a slash
 
@@ -83,27 +81,46 @@ func handler(w http.ResponseWriter, r *http.Request) {
             fmt.Printf("Error reading %s: %d\n", r.URL.Path, dir_read_error)
         }
 
-        fmt.Fprintf(w,"<html>\n")
-        fmt.Fprintf(w,"<head>\n")
-        fmt.Fprintf(w,"  <script type='text/javascript' src='/script.js'></script>\n")
-        fmt.Fprintf(w,"</head>\n")
-        fmt.Fprintf(w,"<body>\n")
-        fmt.Fprintf(w,"  <span id='count'>%d</span> Visits so far\n", visits)
-        fmt.Fprintf(w,"  <ul>\n")
-        for _, f := range files {
+		// Now this part uses go templates.  Need to work out how a
+		// project is supposed to lay out its random files.  For now,
+		// all web page related stuff is in http, like html, css, and
+		// js
+		
+		// Parse and check the template
+		t := template.Must(template.ParseFiles("http/dirview.html"))
+		if err != nil {fmt.Printf("Error opening dirview.html\n")}
+
+		var filenames []string = make([]string, len(files))
+
+		var i int = 0
+
+		// Translate the file objects into file names
+		// Todo - Use a dile struct with more data - file size,
+		// modification date, etc
+		for _, f := range files {
             dir, err:=isDirectory(request+f.Name())
             if err != nil {
                 fmt.Printf("Error reading file: %s", request+f.Name())
                 // How can this happen?
             }
+			filenames[i] = f.Name()
             if dir {
-                fmt.Fprintf(w,"    %s\n",tagify(linkify(f.Name()+"/"),"li", ""))
-            } else {
-                fmt.Fprintf(w,"    %s\n",tagify(linkify(f.Name()),"li", ""))
-            }
+                //fmt.Fprintf(w,"
+				filenames[i] = filenames[i]+"/"
+			} 
+			i++
         }
-        fmt.Fprintf(w,"  </ul>\n")
-        fmt.Fprintf(w,"</body>\n</html>")
+		
+		dirStruct := directory {
+			Visits: visits,
+			Path: r.URL.Path,
+			Files: filenames,
+		}
+
+		// Execute the template, write to web server
+		err := t.Execute(w, dirStruct)
+		if err != nil {fmt.Printf("Error executing the template\n")}
+		
     } else {
         http.ServeFile(w, r, request)
     }
