@@ -1,12 +1,42 @@
 <html>
   <head>
     <title>Go Media Server v0.2</title>
+    <style>
+     ul {
+       list-style: none;
+     }
+     li {
+       
+       margin: 10px;
+     }
+     li a {
+       text-decoration: none;
+     }
+     .name, .size, .time {
+       display: inline-block;
+       width: 400px;
+       border: 2px solid black;
+     }
+     
+    </style>
   </head>
   <body>
     <h1>{{.Path}}</h1>
-    <ul>
-      {{range .Files}}
-      <li><a href="{{.}}">{{.}}</a></li>
+    <ul>  
+      <li>
+	<span class="name">File Name</span>
+	<span class="size">File Size</span>
+	<span class="time">Last Modification</span>
+      </li>
+      <li>
+      {{with .Files}}
+        {{range .}}
+          <li><a href="{{.Name}}{{if.IsDir}}/{{end}}">
+	    <span class="name">{{.Name}}</span>
+	    <span class="size">{{.Size}}</span>
+	    <span class="time">{{.ModTime}}</span>
+	  </a></li>
+	{{end}}
       {{end}}
     </ul>
     {{.Visits}} requests to this web server so far

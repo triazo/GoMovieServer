@@ -8,14 +8,23 @@ import (
     "path/filepath"
     "strings"
 	"text/template"
+	"time"
 )
 
 var visits int = 0
 
-type directory struct {
+type dirNode struct {
+	Name    string
+	Size    int64
+	//Mode    FileMode
+	ModTime time.Time
+	IsDir   bool
+}
+
+type fileNode struct {
 	Visits  int
 	Path    string
-	Files   []string
+	Files   []*dirNode
 }
 
 func getHostname() (string) {
@@ -25,29 +34,24 @@ func getHostname() (string) {
 
 func isDirectory(path string) (bool, error) {
     // Returns true if the given path is a directory
-    f, err := os.Open(path)
-    if err != nil {
-        fmt.Printf("Cannot open file %s\n", path)
-        return false, err
-        // Dunno? Return 404?
-    }
 
-    fi, err := f.Stat()
-    defer f.Close()
-    if err != nil {
+    fi, err := os.Stat(path)
+	if err != nil {
         return false, err
         fmt.Printf("Error Stating file %s\n", path)
-        // How could this error???
     }
 
-    var dir bool = false
-    if fi.Mode().IsDir() {
-        return true, nil
-    }
-
-    return dir, nil
+	return fi.IsDir(), nil
 }
 
+func makeFileStruct(f os.FileInfo) (*dirNode) {
+	r := new(dirNode)
+	r.Name = f.Name()
+	r.Size = f.Size()
+	r.ModTime = f.ModTime()
+	r.IsDir = f.IsDir()
+	return r
+}
 
 func handler(w http.ResponseWriter, r *http.Request) {
 
@@ -60,8 +64,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     mode, err := isDirectory(request)
     if err != nil {
 		w.WriteHeader(404)
-        // 404 Should occur here somehow
-        return
+		return
     }
 
     if mode {
@@ -75,53 +78,37 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
         // At this point you can assume there is a slash
 
-        // Get a directory listingp
+        // Get a directory listing
         files, dir_read_error := ioutil.ReadDir(request)
         if dir_read_error != nil {
             fmt.Printf("Error reading %s: %d\n", r.URL.Path, dir_read_error)
         }
 
-		// Now this part uses go templates.  Need to work out how a
-		// project is supposed to lay out its random files.  For now,
-		// all web page related stuff is in http, like html, css, and
-		// js
-		
 		// Parse and check the template
 		t := template.Must(template.ParseFiles("http/dirview.html"))
 		if err != nil {fmt.Printf("Error opening dirview.html\n")}
 
-		var filenames []string = make([]string, len(files))
-
+		var Nodes []*dirNode = make([]*dirNode, len(files))
 		var i int = 0
-
-		// Translate the file objects into file names
-		// Todo - Use a dile struct with more data - file size,
-		// modification date, etc
 		for _, f := range files {
-            dir, err:=isDirectory(request+f.Name())
-            if err != nil {
-                fmt.Printf("Error reading file: %s", request+f.Name())
-                // How can this happen?
-            }
-			filenames[i] = f.Name()
-            if dir {
-                //fmt.Fprintf(w,"
-				filenames[i] = filenames[i]+"/"
-			} 
+
+			// Delegate the actual processing to another thing
+			Nodes[i] = makeFileStruct(f)
 			i++
         }
 		
-		dirStruct := directory {
+		// Construct the dirStruct!
+		dirStruct := fileNode {
 			Visits: visits,
 			Path: r.URL.Path,
-			Files: filenames,
+			Files: Nodes,
 		}
 
 		// Execute the template, write to web server
 		err := t.Execute(w, dirStruct)
 		if err != nil {fmt.Printf("Error executing the template\n")}
-		
-    } else {
+
+	} else {
         http.ServeFile(w, r, request)
     }
 
