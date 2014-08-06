@@ -7,24 +7,24 @@ import (
     "os"
     "path/filepath"
     "strings"
-	"text/template"
-	"time"
+    "text/template"
+    // "time"
 )
 
 var visits int = 0
 
 type dirNode struct {
-	Name    string
-	Size    int64
-	//Mode    FileMode
-	ModTime time.Time
-	IsDir   bool
+    Name    string
+    Size    int64
+    //Mode    FileMode
+    ModTime int64
+    IsDir   bool
 }
 
 type fileNode struct {
-	Visits  int
-	Path    string
-	Files   []*dirNode
+    Visits  int
+    Path    string
+    Files   []*dirNode
 }
 
 func getHostname() (string) {
@@ -36,21 +36,21 @@ func isDirectory(path string) (bool, error) {
     // Returns true if the given path is a directory
 
     fi, err := os.Stat(path)
-	if err != nil {
+    if err != nil {
         return false, err
         fmt.Printf("Error Stating file %s\n", path)
     }
 
-	return fi.IsDir(), nil
+    return fi.IsDir(), nil
 }
 
 func makeFileStruct(f os.FileInfo) (*dirNode) {
-	r := new(dirNode)
-	r.Name = f.Name()
-	r.Size = f.Size()
-	r.ModTime = f.ModTime()
-	r.IsDir = f.IsDir()
-	return r
+    r := new(dirNode)
+    r.Name = f.Name()
+    r.Size = f.Size()
+    r.ModTime = f.ModTime().Unix()
+    r.IsDir = f.IsDir()
+    return r
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -63,8 +63,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
     mode, err := isDirectory(request)
     if err != nil {
-		w.WriteHeader(404)
-		return
+        w.WriteHeader(404)
+        return
     }
 
     if mode {
@@ -84,31 +84,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
             fmt.Printf("Error reading %s: %d\n", r.URL.Path, dir_read_error)
         }
 
-		// Parse and check the template
-		t := template.Must(template.ParseFiles("http/dirview.html"))
-		if err != nil {fmt.Printf("Error opening dirview.html\n")}
+        // Parse and check the template
+        t := template.Must(template.ParseFiles("http/dirview.html"))
+        if err != nil {fmt.Printf("Error opening dirview.html\n")}
 
-		var Nodes []*dirNode = make([]*dirNode, len(files))
-		var i int = 0
-		for _, f := range files {
+        var Nodes []*dirNode = make([]*dirNode, len(files))
+        var i int = 0
+        for _, f := range files {
 
-			// Delegate the actual processing to another thing
-			Nodes[i] = makeFileStruct(f)
-			i++
+            // Delegate the actual processing to another thing
+            Nodes[i] = makeFileStruct(f)
+            i++
         }
-		
-		// Construct the dirStruct!
-		dirStruct := fileNode {
-			Visits: visits,
-			Path: r.URL.Path,
-			Files: Nodes,
-		}
 
-		// Execute the template, write to web server
-		err := t.Execute(w, dirStruct)
-		if err != nil {fmt.Printf("Error executing the template\n")}
+        // Construct the dirStruct!
+        dirStruct := fileNode {
+            Visits: visits,
+            Path: r.URL.Path,
+            Files: Nodes,
+        }
 
-	} else {
+        // Execute the template, write to web server
+        err := t.Execute(w, dirStruct)
+        if err != nil {fmt.Printf("Error executing the template\n")}
+
+    } else {
         http.ServeFile(w, r, request)
     }
 

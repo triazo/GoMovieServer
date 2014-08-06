@@ -6,39 +6,185 @@
        list-style: none;
      }
      li {
-       
        margin: 10px;
      }
      li a {
        text-decoration: none;
      }
-     .name, .size, .time {
+
+     ul li span {
        display: inline-block;
        width: 400px;
        border: 2px solid black;
+       background-color: #ededed;
      }
-     
+     .dir span {
+       background-color: #d0d0d0;
+     }
+
+
     </style>
+    <script>
+     var sizes = [];
+     var times = [];
+     var names = [];
+
+     function range(i) {
+       // Same as python's range function, implemented recursively
+       return i?range(i-1).concat(i-1):[];
+     }
+
+     function bySize(a,b) {
+       return sizes[a]>sizes[b];
+     }
+
+     function byTime(a,b) {
+       return times[a]>times[b];
+     }
+
+     function byName(a,b) {
+       return names[a]>names[b];
+     }
+
+     function makeHumanReadableSize(x) {
+       // Assume that x is an integer representing the number of bytes
+       var labels = ["", "K", "M", "G", "T", "P", "E", "Z", "Y"];
+       var i = 0;
+       while (x > 1024) {
+         x = x / 1024;
+         i++;
+       }
+       return (Math.round(x * 100) / 100).toString() + " " + labels[i] + "B";
+     }
+
+     function makeHumanReadableTime (x) {
+       var units = ["second", "minute", "hour", "day", "month", "year"];
+       var conversions = [60, 60, 24, 30, 12, 999999999999];
+       var i  = 0;
+
+       while (x > conversions[i]) {
+         x = x / conversions[i];
+         i++;
+       }
+
+       return (Math.round(x*10)/10).toString() + " " + units[i] + ((x!=1)?"s":"") + " ago"
+     }
+
+     var lastsort = byName;
+     var lastsortdir = true;
+
+     function sortFiles(comparator) {
+       // Make a copy of the list
+       var listnode = document.getElementById("filelist");
+       var list = listnode.children;
+       var newlist = [];
+       var newsizes = [];
+       var newtimes = [];
+       var newnames = [];
+
+       // Make an array with index numbers.  Sort this
+       var newpositions = range(list.length);
+       newpositions.sort(comparator);
+
+       // Potentially reverse
+       if (comparator == lastsort && lastsortdir) {
+         newpositions.reverse();
+         lastsortdir = false;
+       }
+       else lastsortdir = true;
+       // Set the sort status
+
+       lastsort = comparator;
+
+
+       // Make a new list to use  
+       for (var i = 0; i < list.length; i++) {
+         // Todo: make a new size and time array
+         newsizes.push(sizes[newpositions[i]]);
+         newtimes.push(times[newpositions[i]]);
+         newnames.push(names[newpositions[i]]);
+         newlist.push(list[newpositions[i]]);
+       }
+
+       // Will overwrite the previous one
+       for (var i = 0; i < newlist.length; i++) {
+         listnode.appendChild(newlist[i]);
+       }
+       sizes = newsizes;
+       times = newtimes;
+       names = newnames;
+     }
+
+     function onLoad() {
+       // First store, then replace the sizes with human readable ones
+       var list = document.getElementById("filelist");
+
+       // For each in the list of files/dirs
+       for (i = 0; i < list.children.length; i++) {
+
+         // List is just a placeholder to get the type right
+         var sizenode = list;
+         var timenode = list;
+         var namenode = list;
+
+         // Loop to find the size node and other values
+         for (j = 0; j < list.children[i].children.length; j++) {
+           if (list.children[i].children[j].className == "name") {
+             namenode = list.children[i].children[j].children[0];
+           } else if (list.children[i].children[j].className == "size") {
+             sizenode = list.children[i].children[j];
+           } else if (list.children[i].children[j].className == "time") {
+             timenode = list.children[i].children[j];
+           }
+         }
+
+         if (namenode != list) {
+           names.push(namenode.textContent);
+         }
+         if (sizenode != list) {
+           var size = parseInt(sizenode.textContent);
+           sizes.push(size);
+           sizenode.textContent = makeHumanReadableSize(size);
+         }
+         if (timenode != list) {
+           var modtime = parseInt(timenode.textContent);
+           times.push(modtime);
+           var curtime = Math.round(new Date().getTime()/1000);
+           timenode.textContent = makeHumanReadableTime(curtime - modtime);
+         }
+       }
+     }
+
+
+    </script>
   </head>
   <body>
     <h1>{{.Path}}</h1>
-    <ul>  
+    <ul>
       <li>
-	<span class="name">File Name</span>
-	<span class="size">File Size</span>
-	<span class="time">Last Modification</span>
+        <span class="name" onMouseDown="sortFiles(byName);">File Name</span>
+        <span class="size" onMouseDown="sortFiles(bySize);">File Size</span>
+        <span class="time" onMouseDown="sortFiles(byTime);">Last Modification</span>
       </li>
-      <li>
+    </ul>
+    <ul id="filelist">
       {{with .Files}}
-        {{range .}}
-          <li><a href="{{.Name}}{{if.IsDir}}/{{end}}">
-	    <span class="name">{{.Name}}</span>
-	    <span class="size">{{.Size}}</span>
-	    <span class="time">{{.ModTime}}</span>
-	  </a></li>
-	{{end}}
+      {{range .}}
+      <li {{if .IsDir}}class="dir"{{end}}>
+        {{if .IsDir}}
+        <a href="{{.Name}}/" class="name"><span>{{.Name}}</span></a>
+        {{else}}
+        <a href="{{.Name}}" class="name"><span>{{.Name}}</span></a>
+        {{end}}
+        <span class="size">{{.Size}}</span>
+        <span class="time">{{.ModTime}}</span>
+      </li>
+      {{end}}
       {{end}}
     </ul>
     {{.Visits}} requests to this web server so far
   </body>
+  <script>
+   onLoad();
+  </script>
 </html>
