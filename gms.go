@@ -4,7 +4,7 @@ import (
     "io/ioutil"
     "fmt"
     "net/http"
-    "os"
+	"os"
     "path/filepath"
     "strings"
     "text/template"
@@ -58,7 +58,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
     // Get a full path to the destanation file
     wd, _ := os.Getwd()
     working_dir, _ := filepath.Abs(wd)
+
     var request string = working_dir + r.URL.Path
+	var values = r.URL.Query()
+	fmt.Printf("%s\n", values)
     fmt.Printf("%s\n",request)
 
     mode, err := isDirectory(request)
