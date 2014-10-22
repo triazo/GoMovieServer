@@ -170,11 +170,11 @@
     <ul id="filelist">
       {{with .Files}}
       {{range .}}
-      <li {{if .IsDir}} class="dir" {{end}}>
+      <li {{if .IsDir}}class="dir"{{end}}>
         {{if .IsDir}}
-			<a href="{{.Name}}/" class="name"><span>{{.Name}}</span></a>
+        <a href="{{.Name}}/" class="name"><span>{{.Name}}</span></a>
         {{else}}
-			<a href="{{.Name}}" class="name"><span>{{.Name}}</span></a>
+        <a href="{{.Name}}" class="name"><span>{{.Name}}</span></a>
         {{end}}
         <span class="size">{{.Size}}</span>
         <span class="time">{{.ModTime}}</span>
